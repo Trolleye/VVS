@@ -7,9 +7,9 @@ class LEDController:
         self.pin_blue = PWM(Pin(10), freq=120, duty_u16=0)
         self.pin_green = PWM(Pin(11), freq=120, duty_u16=0)
         self.pin_red = PWM(Pin(21), freq=120, duty_u16=0)
-        self.pin_buzzer = PWM(Pin(13), freq=1, duty_u16=0)
+        self.pin_buzzer = PWM(Pin(5), freq=20, duty_u16=0)
         self.pin_boot = Pin(9, Pin.IN, Pin.PULL_UP)
-        self.pwm_cycle()
+        self.read_pwm()
 
 
     def reset_led(self):
@@ -125,23 +125,40 @@ class LEDController:
         self.set_led(8)
 
     @staticmethod
-    def read_buzzer_pwm():
-        while True:  # Keep asking until valid input
+    def read_buzzer_duty_cycle():
+        while True:
             try:
                 duty = int(input("Enter duty cycle value for buzzer (0-1023): "))
-                if not 0 <= duty <= 1023:
-                    print("Duty cycle must be between 0-1023")
-                    continue  # Skip to next iteration
-
-                freq = int(input("Enter frequency for buzzer (20-20000): "))
-                if not 20 <= freq <= 20000:
-                    print("Frequency must be between 20-20000")
-                    continue  # Skip to next iteration
-
-                return duty, freq  # Only return when both values are valid
-
+                if 0 <= duty <= 1023:
+                    return duty
+                print("Duty cycle must be between 0-1023")
             except ValueError:
-                print("Please enter valid integers")
+                print("Please enter a valid integer")
+
+    @staticmethod
+    def read_buzzer_frequency():
+        while True:
+            try:
+                freq = int(input("Enter frequency for buzzer (20-20000): "))
+                if 20 <= freq <= 20000:
+                    return freq
+                print("Frequency must be between 20-20000")
+            except ValueError:
+                print("Please enter a valid integer")
+
+    def read_pwm(self):
+        previous_state = 1
+        self.prompt_led_colors()
+        buzzer_duty = self.read_buzzer_duty_cycle()
+        buzzer_freq = self.read_buzzer_frequency()
+        self.pin_buzzer.duty_u16(buzzer_duty)
+        self.pin_buzzer.freq(buzzer_freq)
+        while True:
+            current_state = self.pin_boot.value()
+            if previous_state == 1 and current_state == 0:
+                self.prompt_led_colors()
+            previous_state = current_state
+            time.sleep(0.01)
 
     @staticmethod
     def read_rgb_pwm(color):
@@ -149,14 +166,14 @@ class LEDController:
             try:
                 value = int(input(f"Enter duty cycle value for {color} (0-1023): "))
                 if 0 <= value <= 1023:
-                    return value * 64 #64 kedze robim v pycharme a pouzivam duty16
+                    return value * 64
                 else:
                     print("Value must be in range 0-1023. Please try again.")
             except ValueError:
                 print("Please enter a valid integer.")
 
 
-    def prompt_user_pwm(self):
+    def prompt_led_colors(self):
         self.reset_led()
         red_duty = self.read_rgb_pwm("red")
         green_duty = self.read_rgb_pwm("green")
@@ -166,12 +183,12 @@ class LEDController:
         self.pin_blue.duty_u16(blue_duty)
 
     def pwm_cycle(self):
-        self.prompt_user_pwm()
+        self.prompt_led_colors()
         previous_state = 1
         while True:
             current_state = self.pin_boot.value()
             if previous_state == 1 and current_state == 0:
-                self.prompt_user_pwm()
+                self.prompt_led_colors()
             previous_state = current_state
             time.sleep(0.01)
 
