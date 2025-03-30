@@ -7,10 +7,8 @@ class LEDController:
         self.pin_blue = PWM(Pin(10), freq=120, duty_u16=0)
         self.pin_green = PWM(Pin(11), freq=120, duty_u16=0)
         self.pin_red = PWM(Pin(21), freq=120, duty_u16=0)
-        self.pin_buzzer = PWM(Pin(5), freq=20, duty_u16=0)
         self.pin_boot = Pin(9, Pin.IN, Pin.PULL_UP)
         self.read_pwm()
-
 
     def reset_led(self):
         self.pin_red.duty_u16(0)
@@ -124,35 +122,16 @@ class LEDController:
         time.sleep(led_sleep_time)
         self.set_led(8)
 
-    @staticmethod
-    def read_buzzer_duty_cycle():
-        while True:
-            try:
-                duty = int(input("Enter duty cycle value for buzzer (0-1023): "))
-                if 0 <= duty <= 1023:
-                    return duty
-                print("Duty cycle must be between 0-1023")
-            except ValueError:
-                print("Please enter a valid integer")
 
-    @staticmethod
-    def read_buzzer_frequency():
-        while True:
-            try:
-                freq = int(input("Enter frequency for buzzer (20-20000): "))
-                if 20 <= freq <= 20000:
-                    return freq
-                print("Frequency must be between 20-20000")
-            except ValueError:
-                print("Please enter a valid integer")
 
     def read_pwm(self):
         previous_state = 1
         self.prompt_led_colors()
-        buzzer_duty = self.read_buzzer_duty_cycle()
-        buzzer_freq = self.read_buzzer_frequency()
-        self.pin_buzzer.duty_u16(buzzer_duty)
-        self.pin_buzzer.freq(buzzer_freq)
+        buzzer = BuzzerController()
+        buzzer_duty = buzzer.read_buzzer_percent()
+        buzzer_freq = buzzer.read_buzzer_frequency()
+        buzzer.pin_buzzer.duty_u16(int(buzzer_duty))
+        buzzer.pin_buzzer.freq(buzzer_freq)
         while True:
             current_state = self.pin_boot.value()
             if previous_state == 1 and current_state == 0:
@@ -192,6 +171,42 @@ class LEDController:
             previous_state = current_state
             time.sleep(0.01)
 
+class BuzzerController:
+    def __init__(self):
+        self.pin_buzzer = PWM(Pin(5), freq=20, duty_u16=0)
 
+    @staticmethod
+    def read_buzzer_duty_cycle():
+        while True:
+            try:
+                duty = int(input("Enter duty cycle value for buzzer (0-1023): "))
+                if 0 <= duty <= 1023:
+                    return duty * 64
+                print("Duty cycle must be between 0-1023")
+            except ValueError:
+                print("Please enter a valid integer")
+
+    @staticmethod
+    def read_buzzer_frequency():
+        while True:
+            try:
+                freq = int(input("Enter frequency for buzzer (20-20000): "))
+                if 20 <= freq <= 20000:
+                    return freq
+                print("Frequency must be between 20-20000")
+            except ValueError:
+                print("Please enter a valid integer")
+
+    @staticmethod
+    def read_buzzer_percent():
+        while True:
+            try:
+                duty = int(input("Enter duty cycle percentage for buzzer (0%-100%): "))
+                if 0 <= duty <= 100:
+                    duty16 = duty * 654.72 / 2
+                    return duty16
+                print("Percentage must be between 0% and 100%")
+            except ValueError:
+                print("Please enter a valid integer")
 
 controller = LEDController()
